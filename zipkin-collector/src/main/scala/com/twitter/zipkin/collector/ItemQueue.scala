@@ -15,13 +15,15 @@
  */
 package com.twitter.zipkin.collector
 
-import com.twitter.concurrent.NamedPoolThreadFactory
-import com.twitter.finagle.stats.{StatsReceiver, DefaultStatsReceiver, Stat}
-import com.twitter.util._
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ArrayBlockingQueue, Executors, TimeUnit}
 
+import com.twitter.concurrent.NamedPoolThreadFactory
+import com.twitter.finagle.stats.{DefaultStatsReceiver, Stat, StatsReceiver}
+import com.twitter.util._
+
 class QueueFullException(size: Int) extends Exception("Queue is full. MaxSize: %d".format(size))
+
 class QueueClosedException extends Exception("Queue is closed")
 
 /**
@@ -37,26 +39,34 @@ class QueueClosedException extends Exception("Queue is closed")
  * The queue can be awaited on and will not complete until it's been closed and drained.
  */
 class ItemQueue[A, B](
-  maxSize: Int,
-  maxConcurrency: Int,
-  process: A => Future[B],
-  timeout: Duration = Duration.Top,
-  stats: StatsReceiver = DefaultStatsReceiver.scope("ItemQueue")
-) extends Closable with CloseAwaitably {
+                       maxSize: Int,
+                       maxConcurrency: Int,
+                       process: A => Future[B],
+                       timeout: Duration = Duration.Top,
+                       stats: StatsReceiver = DefaultStatsReceiver.scope("ItemQueue")
+                       ) extends Closable with CloseAwaitably {
 
   @volatile protected[this] var running: Boolean = true
   protected[this] val queue = new ArrayBlockingQueue[A](maxSize)
-  private[this] val queueSizeGauge = stats.addGauge("queueSize") { queue.size }
+  private[this] val queueSizeGauge = stats.addGauge("queueSize") {
+    queue.size
+  }
   protected[this] val queueFullCounter = stats.counter("queueFull")
   private[this] val activeWorkers = new AtomicInteger(0)
-  private[this] val activeWorkerGauge = stats.addGauge("activeWorkers") { activeWorkers.get }
-  private[this] val maxConcurrencyGauge = stats.addGauge("maxConcurrency") { maxConcurrency }
+  private[this] val activeWorkerGauge = stats.addGauge("activeWorkers") {
+    activeWorkers.get
+  }
+  private[this] val maxConcurrencyGauge = stats.addGauge("maxConcurrency") {
+    maxConcurrency
+  }
   private[this] val failuresCounter = stats.counter("failures")
   private[this] val successesCounter = stats.counter("successes")
 
   private[this] val futurePool = new ExecutorServiceFuturePool(Executors.newCachedThreadPool(
     new NamedPoolThreadFactory("ItemQueuePool", makeDaemons = true)))
-  private[this] val workers = Seq.fill(maxConcurrency) { futurePool(loop()) }
+  private[this] val workers = Seq.fill(maxConcurrency) {
+    futurePool(loop())
+  }
 
   private[this] def loop() {
     while (running || !queue.isEmpty) {
@@ -86,8 +96,10 @@ class ItemQueue[A, B](
   def add(item: A): Future[Unit] =
     if (!running) {
       QueueClosed
+    } else if (!queue.offer(item)) {
+      queueFullCounter.incr()
+      QueueFull
     } else {
-      queue.put(item)
       Future.Done
     }
 }

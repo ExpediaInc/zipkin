@@ -30,8 +30,8 @@ object KafkaSpanReceiverFactory {
 }
 trait KafkaSpanReceiverFactory { self: App =>
   val defaultKafkaServer = "127.0.0.1:2181"
-  val defaultKafkaGroupId = "zipkin"
-  val defaultKafkaConsumerId = "zipkin"
+  val defaultKafkaConsumerId = "blackbox-collector"
+  val defaultKafkaGroupId = "blackbox-collector"
   val defaultKafkaZkConnectionTimeout = "1000000"
   val defaultKafkaSessionTimeout = "4000"
   val defaultKafkaSyncTime = "2000"
