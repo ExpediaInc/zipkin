@@ -7,7 +7,7 @@ import com.twitter.zipkin.common.Span
 import kafka.message.Message
 
 class SpanCodec extends KafkaProcessor.KafkaDecoder {
-  val deserializer = new BinaryThriftStructSerializer[ThriftSpan] {
+  val deserializer = new FullJsonThriftSerializer[ThriftSpan] {
     def codec = ThriftSpan
   }
 
