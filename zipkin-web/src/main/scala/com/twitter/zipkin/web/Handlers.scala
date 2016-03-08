@@ -388,6 +388,17 @@ class Handlers(mustacheGenerator: ZipkinMustache, queryExtractor: QueryExtractor
     JsonRenderer(data)
   }
 
+  //this is a hack to make it work as cloud formation
+  def handleIsActive(): Service[Request, Renderer] =
+    Service.mk[Request, Renderer] { req =>
+      Future.value(ErrorRenderer(200, "ACTIVE"))
+    }
+
+  def handleBuildInfo(): Service[Request, Renderer] =
+    Service.mk[Request, Renderer] { req =>
+      Future.value(JsonRenderer(Map("version"->"latest","branch"->"origin/master","buildTime" -> "20160304-1439", "applicationVersion" -> "1.33.2-SNAPSHOT")))
+    }
+
   def handleTrace(client: HttpClient): Service[Request, Renderer] =
     Service.mk[Request, Renderer] { req =>
       pathTraceId(req.path.split("/").lastOption) map { id =>
