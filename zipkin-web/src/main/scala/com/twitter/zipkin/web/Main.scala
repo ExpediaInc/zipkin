@@ -107,7 +107,10 @@ trait ZipkinWebFactory { self: App =>
       ("/config.js", handleConfig(Map(
         "environment" -> environment(),
         "queryLimit" -> queryLimit()
-      )))
+      ))),
+      //Adding these two servlets to align to expedia's cloud-formation deployment script
+      ("/isActive", handleIsActive()),
+      ("/buildInfo", handleBuildInfo())
     ).foldLeft(new HttpMuxer) { case (m , (p, handler)) =>
       val path = p.split("/").toList
       val handlePath = path.takeWhile { t => !(t.startsWith(":") || t.startsWith("?:")) }
