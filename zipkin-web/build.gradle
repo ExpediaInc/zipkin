@@ -35,7 +35,7 @@ dependencies {
 
 node {
     // Version of node to use.
-    version = '5.5.0'
+    version = '5.7.1'
 
     // Version of npm to use.
     npmVersion = '3.8.0'
