@@ -13,17 +13,16 @@ class SpanDecoder extends KafkaProcessor.KafkaDecoder {
   private[this] val log = Logger.get(getClass.getName)
 
 
-  override def fromBytes(bytes: Array[Byte]): Option[List[ThriftSpan]] = {
+  override def fromBytes(bytes: Array[Byte]): List[ThriftSpan] = {
     try {
-      Some(List {
+      List {
         deserializer.fromBytes(bytes)
-      })
+      }
     }
     catch {
-      case e: Throwable => {
+      case e: Throwable =>
         log.error(s"${e.getCause}")
-        None
-      }
+        List.empty
     }
   }
 }
