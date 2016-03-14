@@ -32,6 +32,13 @@ class Handlers {
     }
   }
 
+  case class JsonRenderer(config: Map[String, _]) extends Renderer {
+    def apply(response: Response) {
+      response.contentType = "application/json"
+      response.contentString = ZipkinJson.writeValueAsString(config)
+    }
+  }
+
   case class ConfigRenderer(config: Map[String, _]) extends Renderer {
     def apply(response: Response) {
       response.contentType = "application/javascript"
@@ -157,5 +164,16 @@ class Handlers {
         client.execute(Request(s"/api/v1/trace/$id"))
           .map(CopyRenderer)
       } getOrElse NotFound
+    }
+
+  //this is a hack to make it work as cloud formation
+  def handleIsActive(): Service[Request, Renderer] =
+    Service.mk[Request, Renderer] { req =>
+      Future.value(ErrorRenderer(200, "ACTIVE"))
+    }
+
+  def handleBuildInfo(): Service[Request, Renderer] =
+    Service.mk[Request, Renderer] { req =>
+      Future.value(JsonRenderer(Map("version"->"latest","branch"->"origin/master","buildTime" -> "20160304-1439", "applicationVersion" -> "1.33.2-SNAPSHOT")))
     }
 }

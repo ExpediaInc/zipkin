@@ -1,21 +1,29 @@
 package com.twitter.zipkin.receiver.kafka
 
-import com.twitter.scrooge.TArrayByteTransport
-import com.twitter.zipkin.conversions.thrift
+import com.twitter.scrooge.TJSONProtocolThriftSerializer
 import com.twitter.zipkin.thriftscala.{Span => ThriftSpan}
-import org.apache.thrift.protocol.{TBinaryProtocol, TType}
+import com.twitter.logging.Logger
+
 
 class SpanDecoder extends KafkaProcessor.KafkaDecoder {
 
-  // Given the thrift encoding is TBinaryProtocol..
-  // .. When serializing a Span (Struct), the first byte will be the type of a field
-  // .. When serializing a List[ThriftSpan], the first byte is the member type, TType.STRUCT
-  // Span has no STRUCT fields: we assume that if the first byte is TType.STRUCT is a list.
-  def fromBytes(bytes: Array[Byte]) =
-    if (bytes(0) == TType.STRUCT) {
-      thrift.thriftListToThriftSpans(bytes)
-    } else {
-      val proto = new TBinaryProtocol(TArrayByteTransport(bytes))
-      List(ThriftSpan.decode(proto))
+  private[this] val deserializer = new TJSONProtocolThriftSerializer[ThriftSpan] {
+    val codec = ThriftSpan
+  }
+  private[this] val log = Logger.get(getClass.getName)
+
+
+  override def fromBytes(bytes: Array[Byte]): Option[List[ThriftSpan]] = {
+    try {
+      Some(List {
+        deserializer.fromBytes(bytes)
+      })
     }
+    catch {
+      case e: Throwable => {
+        log.error(s"${e.getCause}")
+        None
+      }
+    }
+  }
 }
