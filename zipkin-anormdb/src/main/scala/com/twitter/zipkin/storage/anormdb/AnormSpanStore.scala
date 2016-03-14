@@ -104,7 +104,13 @@ class AnormSpanStore(val db: DB,
     }
   }
 
-  override def getTracesByIds(traceIds: Seq[Long]): Future[Seq[List[Span]]] = db.inNewThreadWithRecoverableRetry {
+  override def getTracesByIds(traceIds: Seq[Long]) = getSpansByTraceIds(traceIds).map(
+    _.map(CorrectForClockSkew)
+     .map(ApplyTimestampAndDuration)
+     .sortBy(_.head)(Ordering[Span].reverse) // sort descending by the first span
+  )
+
+  override def getSpansByTraceIds(traceIds: Seq[Long]): Future[Seq[Seq[Span]]] = db.inNewThreadWithRecoverableRetry {
     implicit val (conn, borrowTime) = borrowConn()
     try {
       val traceIdsString:String = traceIds.mkString(",")
@@ -112,9 +118,12 @@ class AnormSpanStore(val db: DB,
         SQL(
           """SELECT DISTINCT id, parent_id, trace_id, name, debug, start_ts, duration
             |FROM zipkin_spans
-            |WHERE trace_id IN (%s)
+            |WHERE trace_id IN (%s)%s
             |ORDER BY start_ts
-          """.stripMargin.format(traceIdsString))
+          """.stripMargin.format(traceIdsString,
+            // Grouping by as explicitly specified durations can cause extra rows in shared spans.
+            // This is an issue for SQLite, but not MySQL due to its UNIQUE KEY(`trace_id`, `id`)
+            if (!db.dbconfig.description.equals("MySQL")) "\n GROUP BY trace_id, id" else ""))
           .as((long("id") ~ get[Option[Long]]("parent_id") ~
           long("trace_id") ~ str("name") ~ get[Option[Int]]("debug") ~
           get[Option[Long]]("start_ts") ~ get[Option[Long]]("duration")map {
@@ -174,12 +183,7 @@ class AnormSpanStore(val db: DB,
           Span(span.traceId, span.spanName, span.spanId, span.parentId, span.timestamp, span.duration, spanAnnos, spanBinAnnos, span.debug)
         }
       }
-      // Redundant sort as List.groupBy loses order of values
-      results.groupBy(_.traceId)
-        .values.toList
-        .map(CorrectForClockSkew)
-        .map(ApplyTimestampAndDuration)
-        .sortBy(_.head)(Ordering[Span].reverse) // sort descending by the first span
+      results.groupBy(_.traceId).values.toSeq
     } finally {
       returnConn(conn, borrowTime, "getSpansByTraceIds")
     }
