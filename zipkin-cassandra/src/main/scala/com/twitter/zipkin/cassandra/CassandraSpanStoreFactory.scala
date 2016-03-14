@@ -72,7 +72,7 @@ trait CassandraSpanStoreFactory {self: App =>
       if (cassandraLocalDc.isDefined)
         DCAwareRoundRobinPolicy.builder().withLocalDc(cassandraLocalDc()).build()
       else
-        new RoundRobinPolicy()
+        new RoundRobinPolicy() // This can select remote, but LatencyAwarePolicy will prefer local
     ).build()))
     builder.withPoolingOptions(new PoolingOptions().setMaxConnectionsPerHost(
       HostDistance.LOCAL, cassandraMaxConnections()

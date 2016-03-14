@@ -30,31 +30,21 @@ import com.twitter.finatra.json.FinatraObjectMapper
 import com.twitter.server.TwitterServer
 import com.twitter.util.Await
 import com.twitter.zipkin.json.ZipkinJson
-import com.twitter.zipkin.web.mustache.ZipkinMustache
 import org.slf4j.LoggerFactory
 
 trait ZipkinWebFactory { self: App =>
   private[this] val resourceDirs = Set(
-    "/public/css",
-    "/public/img",
-    "/public/js",
-    "/public/templates",
-
-    "/app/libs",
-    "/app/css",
-    "/app/img",
-    "/app/js",
-    "/dist"
+    "/"
   )
 
   private[this] val typesMap = Map(
     "css" -> "text/css",
     "png" -> "image/png",
-    "js" -> "application/javascript"
+    "js" -> "application/javascript",
+    "html" -> "text/html"
   )
 
   val webServerPort = flag("zipkin.web.port", new InetSocketAddress(8080), "Listening port for the zipkin web frontend")
-  val webRootUrl = flag("zipkin.web.rootUrl", "http://localhost:8080/", "Url where the service is located")
   val queryDest = flag("zipkin.web.query.dest", "127.0.0.1:9411", "Location of the query server")
   val queryLimit = flag("zipkin.web.query.limit", 10, "Default query limit for trace results")
   val environment = flag("zipkin.web.environmentName", "", "The name of the environment Zipkin is running in")
@@ -68,7 +58,7 @@ trait ZipkinWebFactory { self: App =>
   * we get the host after the [[queryDest]] flag has been parsed.
   */
   lazy val queryClient = new HttpClient(
-    httpService = Http.client.configured(param.Label("zipkin-query"))
+    httpService = Http.client.configured(param.Label("zipkin-web"))
                              .newClient(queryDest()).toService,
     defaultHeaders = Map(
       "Host" -> queryDest(),
@@ -77,9 +67,7 @@ trait ZipkinWebFactory { self: App =>
     mapper = new FinatraObjectMapper(ZipkinJson)
   )
 
-  def newMustacheGenerator = new ZipkinMustache()
-  def newQueryExtractor = new QueryExtractor(queryLimit())
-  def newHandlers = new Handlers(newMustacheGenerator, newQueryExtractor)
+  def newHandlers = new Handlers
 
   def newWebServer(
     queryClient: HttpClient = queryClient,
@@ -89,21 +77,14 @@ trait ZipkinWebFactory { self: App =>
     import handlers._
 
     Seq(
-      ("/app/", handlePublic(resourceDirs, typesMap)),
-      ("/public/", handlePublic(resourceDirs, typesMap)),
-      ("/dist/", handlePublic(resourceDirs, typesMap)),
+      ("/", handlePublic(Set("/"), typesMap)),
       // In preparation of moving static assets to zipkin-query
+      ("/health", handleRoute(queryClient, "/health")),
       ("/api/v1/dependencies", handleRoute(queryClient, "/api/v1/dependencies")),
       ("/api/v1/services", handleRoute(queryClient, "/api/v1/services")),
       ("/api/v1/spans", handleRoute(queryClient, "/api/v1/spans")),
       ("/api/v1/trace/:id", handleTrace(queryClient)),
       ("/api/v1/traces", handleRoute(queryClient, "/api/v1/traces")),
-      // TODO: Once the following are javascript-only, we can move remove zipkin-web
-      ("/modelview/", handleIndex(queryClient)),
-      ("/modelview/traces/:id", handleTraces(queryClient)),
-      ("/", serveStaticIndex()),
-      ("/traces/:id", serveStaticIndex()),
-      ("/dependency", serveStaticIndex()),
       ("/config.js", handleConfig(Map(
         "environment" -> environment(),
         "queryLimit" -> queryLimit()
