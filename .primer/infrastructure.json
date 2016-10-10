@@ -1,0 +1,32 @@
+{
+  "eweprod": {
+    "us-east-1d": {
+      "size": "c3.2xlarge",
+      "security_group_ids": "sg-2827c847,sg-c327c8ac,sg-882dc2e7,sg-a82fc0c7,sg-349dc651",
+      "elb": {
+        "security_group_ids": "sg-d727c8b8"
+      }
+    }
+  },
+  "ewetest-int": {
+    "us-east-1a": {
+      "size": "c3.large",
+      "security_group_ids": "sg-b4618edb,sg-45608f2a,sg-44608f2b,sg-30f41a5f,sg-0809706d"
+    },
+    "us-east-1d": {
+      "size": "c3.large",
+      "security_group_ids": "sg-b4618edb,sg-45608f2a,sg-44608f2b,sg-30f41a5f,sg-0809706d"
+    },
+    "us-west-2a": {
+      "size": "c3.large",
+      "elb": {
+        "security_group_ids": "sg-51588334"
+      }
+    }
+  },
+  "ewetest": {
+    "us-west-2c": {
+      "size": "c3.large"
+    }
+  }
+}

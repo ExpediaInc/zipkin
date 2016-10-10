@@ -15,3 +15,5 @@ zipkin-web/node_modules
 /.nb-gradle/
 # .travis.yml installs cassandra in the pwd
 dsc-cassandra-*
+# Primer config directory - Do not remove and leave as the last line in .gitignore
+!.primer
