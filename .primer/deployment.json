@@ -1,0 +1,25 @@
+{
+  "global": {
+    "app_name": "zipkin-web",
+    "notify": {
+      "email": {
+        "addresses": [
+          "haystack@expedia.com"
+        ]
+      },
+      "hipchat": {
+        "room": "Haystack"
+      }
+    },
+    "source_repo": "git@github.com:ExpediaInc/zipkin.git",
+    "team": "Haystack",
+    "department": "Exp Eng Platform and GRO US",
+    "cost_center": "10357"
+  },
+  "ewetest-int": {
+    "no-auto-delete": true,
+    "isactive_support": {
+      "enabled": false
+    }
+  }
+}
